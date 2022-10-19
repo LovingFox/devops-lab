@@ -1,0 +1,67 @@
+version: '3.7'
+
+services:
+  gitlab:
+    container_name: gitlab
+    image: gitlab/gitlab-ce
+    hostname: gitlab.rtru.tk
+    networks:
+      devops:
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://gitlab.rtru.tk'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2222
+    ports:
+      - 2222:22
+    volumes:
+      - ./gitlab/config:/etc/gitlab
+      - ./gitlab/logs:/var/log/gitlab
+      - ./gitlab/data:/var/opt/gitlab
+    shm_size: '256m'
+
+  nexus:
+    container_name: nexus
+    image: sonatype/nexus3
+    networks:
+      devops:
+    volumes:
+      - nexus-data:/nexus-data
+
+  jenkins:
+    container_name: jenkins
+    image: jenkins/jenkins:lts-jdk11
+    networks:
+      devops:
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /etc/hosts:/etc/hosts:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOCKER_COMMAND}:/usr/bin/docker:ro
+    group_add:
+      - ${DOCKER_GROUP}
+
+  nginx:
+    container_name: nginx
+    image: nginx:alpine
+    networks:
+      devops:
+    volumes:
+      - ./data/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    ports:
+      - 80:80
+      - 443:443
+      - 8123:8123
+
+
+networks:
+  devops:
+    name: devops
+
+
+volumes:
+  jenkins_home:
+    external: true
+  nexus-data:
+    external: true
